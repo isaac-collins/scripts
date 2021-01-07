@@ -1,0 +1,49 @@
+#     Generates script for sonicwall CLI to add CSV list of hostnames or net ranges
+#
+#
+#Path to CSV:
+$CSVpath = "C:\ips.csv"
+
+#Path to dump SW script:
+$ScriptPath = "C:\"
+
+#ZONE for addr Objects:
+$zone = "WAN"
+
+#What to call the Address groups  
+$addrgrp = "NETWORKS"
+
+#address object prefix:
+$addrobpref = "NET_"
+
+#                  Text file name:
+$Script = New-Item -Name "Script.txt" -ItemType "file" -Path $ScriptPath
+Add-Content $Script "config"
+
+$list = Import-Csv $CSVpath
+
+$cnt = 0
+ForEach ($ip in $list) {
+    $cnt++
+    
+    if($ip.Address -like "*/*") {
+
+        $addr,$msk = $ip.Address.Split("/")
+
+        write-Host "address-object ipv4 $addrobpref$cnt network $addr /$msk zone $zone"
+        Add-Content $Script -value "address-object ipv4 $addrobpref$cnt network $addr /$msk zone $zone"
+    }else {
+        write-Host "address-object ipv4 $addrobpref$cnt network $addr /$msk zone $zone"
+        Add-Content $Script -value "address-object ipv4 $addrobpref$cnt host $ip.Address zone $zone"   
+    }
+}
+
+
+#add to addr group:
+
+Add-Content $Script -Value "address-group ipv4 `"$addrgrp`""
+
+for ($i=1; $i -le $cnt; $i++) {
+    Write-Host "address-object ipv4 $addrobpref$i"
+    Add-Content $Script "address-object ipv4 $addrobpref$i"
+}
